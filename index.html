@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Akademia Klawiatury — Trening Bezwzrokowy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- EKRAN LOGOWANIA / REJESTRACJI -->
+  <section id="auth-screen" class="screen active">
+    <div class="auth-card">
+      <div class="brand-badge">SYSTEM SZKOLENIA PILOTÓW</div>
+      <h1>AKADEMIA <span>KLAWIATURY</span></h1>
+      <p class="auth-subtitle">Opanuj pisanie bez patrzenia na klawisze i zdobywaj kolejne rangi.</p>
+
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab active" type="button">Logowanie</button>
+        <button id="tab-register" class="auth-tab" type="button">Nowe konto</button>
+      </div>
+
+      <form id="auth-form">
+        <div class="field">
+          <label for="auth-login">Login pilota</label>
+          <input id="auth-login" type="text" placeholder="np. kuba_pl" required minlength="3" maxlength="20" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="auth-password">Hasło</label>
+          <input id="auth-password" type="password" placeholder="Minimum 6 znaków" required minlength="6" autocomplete="current-password" />
+        </div>
+        <div id="auth-error" class="error-box hidden"></div>
+        <button id="auth-submit" type="submit" class="btn-primary full">Wejdź na pokład</button>
+      </form>
+
+      <div class="demo-divider"><span>lub przetestuj od razu</span></div>
+      <button id="btn-demo-mode" type="button" class="btn-ghost full">Uruchom tryb lokalny (bez konfiguracji Firebase)</button>
+    </div>
+  </section>
+
+  <!-- GŁÓWNY PANEL APLIKACJI -->
+  <div id="app-shell" class="hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="logo-dot"></span>
+        <strong>AKADEMIA KLAWIATURY</strong>
+      </div>
+
+      <nav class="main-nav">
+        <button class="nav-btn active" data-view="campaign">Mapa Misji</button>
+        <button class="nav-btn" data-view="timetrial">Wyzwanie 60s</button>
+        <button class="nav-btn" data-view="hangar">Hangar Treningowy</button>
+        <button class="nav-btn" data-view="stats">Statystyki</button>
+      </nav>
+
+      <div class="topbar-right">
+        <div class="pilot-hud">
+          <span id="hud-rank" class="rank-pill">Rekrut</span>
+          <span id="hud-login" class="pilot-name">Pilot</span>
+          <span id="hud-xp" class="xp-pill">0 XP</span>
+        </div>
+        <button id="btn-sound" class="icon-btn" title="Dźwięk włączony">🔊</button>
+        <button id="btn-logout" class="btn-ghost small">Wyloguj</button>
+      </div>
+    </header>
+
+    <!-- WIDOK 1: MAPA KAMPANII -->
+    <main id="view-campaign" class="view active">
+      <div class="view-header">
+        <div>
+          <h2>Kampania Główna</h2>
+          <p>Próg zaliczenia każdej misji: <strong>93% celności</strong>. Liczy się precyzja, nie pośpiech.</p>
+        </div>
+        <div class="legend-pills">
+          <span class="pill">★ ≥ 93% celności</span>
+          <span class="pill">★★ ≥ 96% + tempo</span>
+          <span class="pill">★★★ ≥ 98% + Combo</span>
+        </div>
+      </div>
+      <div id="modules-container" class="modules-grid"></div>
+    </main>
+
+    <!-- WIDOK 2: ARENA TRENINGOWA (LEKCJA LUB WYŚCIG 60S) -->
+    <main id="view-arena" class="view">
+      <div class="arena-topbar">
+        <button id="btn-exit-arena" class="btn-ghost small">← Wróć</button>
+        <div class="mission-meta">
+          <span id="arena-module-tag" class="tag">MODUŁ 1</span>
+          <h3 id="arena-title">1.1 Kotwice F i J</h3>
+        </div>
+        <div class="live-metrics">
+          <div id="metric-time-box" class="metric hidden">
+            <span class="metric-label">CZAS</span>
+            <span id="metric-time" class="metric-val accent">60s</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">CELNOŚĆ</span>
+            <span id="metric-acc" class="metric-val good">100%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">TEMPO</span>
+            <span id="metric-wpm" class="metric-val">0 WPM</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">COMBO</span>
+            <span id="metric-combo" class="metric-val accent">0x</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pasek energii / czasu -->
+      <div class="shield-bar-wrap">
+        <div id="shield-bar-fill" class="shield-bar-fill" style="width: 0%"></div>
+      </div>
+
+      <!-- Wskazówka ułożenia palców dla aktualnego znaku -->
+      <div id="finger-hint" class="finger-hint">
+        Połóż palce wskazujące na klawiszach <strong>F</strong> i <strong>J</strong> (wyczuj wypustki)
+      </div>
+
+      <!-- Pole wyświetlania tekstu -->
+      <div id="typing-box" class="typing-box" tabindex="0">
+        <div id="text-display" class="text-display"></div>
+        <input id="hidden-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      </div>
+
+      <!-- Wirtualna klawiatura z kolorowymi strefami palców -->
+      <div class="keyboard-wrapper">
+        <div id="virtual-keyboard" class="virtual-keyboard"></div>
+        <div class="finger-legend">
+          <span><i class="dot f-pinky"></i>Mały palec</span>
+          <span><i class="dot f-ring"></i>Serdeczny</span>
+          <span><i class="dot f-middle"></i>Środkowy</span>
+          <span><i class="dot f-index-l"></i>Wskazujący L</span>
+          <span><i class="dot f-index-r"></i>Wskazujący P</span>
+          <span><i class="dot f-thumb"></i>Kciuk (Spacja / Prawy Alt)</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- WIDOK 3: WYZWANIE CZASOWE 60 SEKUND -->
+    <main id="view-timetrial" class="view">
+      <div class="view-header">
+        <div>
+          <h2>Wyzwanie Czasowe — 60 Sekund</h2>
+          <p>Przepisz jak najwięcej zdań w minutę. Rekord zapisuje się przy minimum <strong>90% celności</strong>.</p>
+        </div>
+      </div>
+
+      <div class="stats-summary">
+        <div class="stat-card">
+          <span>Twój Rekord Prędkości</span>
+          <strong id="tt-best-wpm">0 WPM</strong>
+        </div>
+        <div class="stat-card">
+          <span>Celność w rekordzie</span>
+          <strong id="tt-best-acc">—</strong>
+        </div>
+        <div class="stat-card">
+          <span>Poprawne znaki (rekord)</span>
+          <strong id="tt-best-chars">0</strong>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Wybierz zakres klawiszy do wyścigu</h3>
+        <div class="difficulty-grid">
+          <button type="button" class="diff-card active" data-diff="basic">
+            <strong>Poziom 1: Bez polskich znaków</strong>
+            <span>Małe litery (Moduły 1–3). Idealny na początek nauki.</span>
+          </button>
+          <button type="button" class="diff-card" data-diff="polish">
+            <strong>Poziom 2: Pełny polski tekst</strong>
+            <span>Wszystkie litery, polskie znaki z Alt i wielkie litery (Moduły 1–5).</span>
+          </button>
+          <button type="button" class="diff-card" data-diff="master">
+            <strong>Poziom 3: Tryb Mistrza</strong>
+            <span>Cała klawiatura: polskie znaki, cyfry i symbole (Moduły 1–6).</span>
+          </button>
+        </div>
+
+        <div class="btn-row" style="margin-top: 20px;">
+          <button id="btn-start-timetrial" type="button" class="btn-primary">Rozpocznij Wyzwanie 60s</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- WIDOK 4: HANGAR TRENINGOWY (WŁASNE SŁOWA) -->
+    <main id="view-hangar" class="view">
+      <div class="view-header">
+        <div>
+          <h2>Hangar Treningowy</h2>
+          <p>Wklej słówka z angielskiego, pojęcia z przyrody lub nazwy z gry i trenuj pisanie bezwzrokowe.</p>
+        </div>
+      </div>
+
+      <div class="hangar-grid">
+        <div class="card">
+          <h3>Nowy zestaw treningowy</h3>
+          <div class="field">
+            <label for="hangar-name">Nazwa zestawu (opcjonalnie przy szybkim starcie)</label>
+            <input id="hangar-name" type="text" placeholder="np. Angielski - Zwierzęta" maxlength="32" />
+          </div>
+          <div class="field">
+            <label for="hangar-words">Słowa lub krótkie zdania (oddzielone spacją, przecinkiem lub enterem)</label>
+            <textarea id="hangar-words" rows="5" placeholder="tiger eagle shark dolphin falcon galaxy planet rocket"></textarea>
+          </div>
+          <div class="btn-row">
+            <button id="btn-hangar-start" type="button" class="btn-primary">Trenuj teraz</button>
+            <button id="btn-hangar-save" type="button" class="btn-ghost">Zapisz zestaw w chmurze</button>
+          </div>
+          <p id="hangar-msg" class="hint-text"></p>
+        </div>
+
+        <div class="card">
+          <h3>Zapisane zestawy (maks. 5)</h3>
+          <div id="saved-sets-list" class="saved-sets-list">
+            <p class="muted">Brak zapisanych zestawów.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- WIDOK 5: STATYSTYKI I WYKRES POSTĘPU -->
+    <main id="view-stats" class="view">
+      <div class="view-header">
+        <div>
+          <h2>Dziennik Postępów Pilota</h2>
+          <p>Porównuj swoje tempo i celność z poprzednich treningów.</p>
+        </div>
+      </div>
+
+      <div class="stats-summary">
+        <div class="stat-card">
+          <span>Aktualna Ranga</span>
+          <strong id="stat-rank">Rekrut</strong>
+        </div>
+        <div class="stat-card">
+          <span>Zdobyte XP</span>
+          <strong id="stat-xp">0 XP</strong>
+        </div>
+        <div class="stat-card">
+          <span>Ukończone misje</span>
+          <strong id="stat-missions">0 / 25</strong>
+        </div>
+        <div class="stat-card">
+          <span>Średnia celność</span>
+          <strong id="stat-avg-acc">—</strong>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <h3>Historia prędkości (WPM) — ostatnie sesje</h3>
+        <div id="progress-chart" class="chart-container"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL PODSUMOWANIA MISJI -->
+  <div id="result-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div id="result-stars" class="result-stars">★★★</div>
+      <h2 id="result-heading">Misja ukończona!</h2>
+      <p id="result-sub" class="muted">Świetna kontrola klawiatury.</p>
+
+      <div class="result-grid">
+        <div><span>Celność</span><strong id="res-acc">98%</strong></div>
+        <div><span>Prędkość</span><strong id="res-wpm">22 WPM</strong></div>
+        <div><span>Maks. Combo</span><strong id="res-combo">34x</strong></div>
+        <div><span>Nagroda</span><strong id="res-xp">+120 XP</strong></div>
+      </div>
+
+      <div class="btn-row center">
+        <button id="btn-retry-mission" class="btn-ghost">Powtórz</button>
+        <button id="btn-next-mission" class="btn-primary">Następna misja →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
